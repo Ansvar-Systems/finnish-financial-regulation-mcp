@@ -1,0 +1,32 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "eu.ansvar/finnish-financial-regulation-mcp",
+  "description": "Query Finanssivalvonta (FIN-FSA) regulations, guidelines, statements, and supervisory actions",
+  "repository": {
+    "url": "https://github.com/Ansvar-Systems/finnish-financial-regulation-mcp",
+    "source": "github"
+  },
+  "homepage": "https://ansvar.eu",
+  "version": "0.1.0",
+  "license": "Apache-2.0",
+  "keywords": [
+    "finanssivalvonta",
+    "fin-fsa",
+    "finnish-financial-regulation",
+    "financial-services",
+    "compliance",
+    "enforcement",
+    "mcp",
+    "ansvar"
+  ],
+  "packages": [
+    {
+      "registryType": "npm",
+      "identifier": "@ansvar/finnish-financial-regulation-mcp",
+      "version": "0.1.0",
+      "transport": {
+        "type": "stdio"
+      }
+    }
+  ]
+}
