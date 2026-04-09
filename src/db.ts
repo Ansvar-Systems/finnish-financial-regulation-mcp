@@ -252,6 +252,38 @@ export function checkProvisionCurrency(reference: string): {
   return { ...row, found: true };
 }
 
+// --- Data freshness ---
+
+export interface DataFreshness {
+  provisions_count: number;
+  enforcement_count: number;
+  latest_provision_date: string | null;
+  latest_enforcement_date: string | null;
+  checked_at: string;
+}
+
+export function checkDataFreshness(): DataFreshness {
+  const db = getDb();
+  const provRow = db
+    .prepare(
+      "SELECT COUNT(*) as cnt, MAX(effective_date) as max_date FROM provisions",
+    )
+    .get() as { cnt: number; max_date: string | null };
+  const enfRow = db
+    .prepare(
+      "SELECT COUNT(*) as cnt, MAX(date) as max_date FROM enforcement_actions",
+    )
+    .get() as { cnt: number; max_date: string | null };
+
+  return {
+    provisions_count: provRow.cnt,
+    enforcement_count: enfRow.cnt,
+    latest_provision_date: provRow.max_date,
+    latest_enforcement_date: enfRow.max_date,
+    checked_at: new Date().toISOString(),
+  };
+}
+
 // --- Enforcement queries ---
 
 export interface SearchEnforcementOptions {

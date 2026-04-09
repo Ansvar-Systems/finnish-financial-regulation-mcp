@@ -26,6 +26,7 @@ import {
   getProvision,
   searchEnforcement,
   checkProvisionCurrency,
+  checkDataFreshness,
 } from "./db.js";
 import { buildCitation } from "./citation.js";
 
@@ -152,6 +153,26 @@ const TOOLS = [
       required: [],
     },
   },
+  {
+    name: "fi_fin_list_sources",
+    description:
+      "Return provenance metadata for the Finanssivalvonta data: official source URLs, supported languages, open-data license, and coverage categories.",
+    inputSchema: {
+      type: "object" as const,
+      properties: {},
+      required: [],
+    },
+  },
+  {
+    name: "fi_fin_check_data_freshness",
+    description:
+      "Report data freshness: latest provision effective date, latest enforcement action date, and row counts for both tables. Useful for assessing how current the local database is.",
+    inputSchema: {
+      type: "object" as const,
+      properties: {},
+      required: [],
+    },
+  },
 ];
 
 // --- Zod schemas ---
@@ -180,10 +201,24 @@ const CheckCurrencyArgs = z.object({
 
 // --- Helper ---
 
+const _META = {
+  disclaimer:
+    "Not legal or regulatory advice. Verify all references against primary sources at finanssivalvonta.fi before making compliance decisions.",
+  copyright:
+    "Data sourced from Finanssivalvonta (FIN-FSA). Official public regulatory publications.",
+  source_url: "https://www.finanssivalvonta.fi/",
+  data_age:
+    "Database is periodically updated. Use fi_fin_check_data_freshness to inspect current data timestamps.",
+};
+
 function textContent(data: unknown) {
+  const payload =
+    typeof data === "object" && data !== null
+      ? { ...(data as Record<string, unknown>), _meta: _META }
+      : data;
   return {
     content: [
-      { type: "text" as const, text: JSON.stringify(data, null, 2) },
+      { type: "text" as const, text: JSON.stringify(payload, null, 2) },
     ],
   };
 }
@@ -273,6 +308,32 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
           data_source: "Finanssivalvonta (https://www.finanssivalvonta.fi/)",
           tools: TOOLS.map((t) => ({ name: t.name, description: t.description })),
         });
+      }
+
+      case "fi_fin_list_sources": {
+        return textContent({
+          jurisdiction: "FI",
+          authority: "Finanssivalvonta (Finnish Financial Supervisory Authority)",
+          authority_url: "https://www.finanssivalvonta.fi/",
+          regulation_index_url:
+            "https://www.finanssivalvonta.fi/en/regulation/FIN-FSA-regulations/",
+          enforcement_url:
+            "https://www.finanssivalvonta.fi/en/about-the-fin-fsa/powers-and-funding/powers-and-authority/supervisory-measures/",
+          languages: ["fi", "sv", "en"],
+          license: "Public regulatory publications — open for research use",
+          coverage_categories: [
+            "FINFSA_Maaraykset — Binding regulations (maaraykset)",
+            "FINFSA_Ohjeet — Supervisory guidelines (ohjeet)",
+            "FINFSA_Kannanotot — Regulatory statements (kannanotot)",
+            "enforcement_actions — Supervisory decisions and administrative sanctions",
+          ],
+          coverage_notes:
+            "Coverage may be incomplete. Always verify against primary sources at finanssivalvonta.fi.",
+        });
+      }
+
+      case "fi_fin_check_data_freshness": {
+        return textContent(checkDataFreshness());
       }
 
       default:
