@@ -1,0 +1,44 @@
+# Data Provenance Metadata
+# Finnish Financial Regulation MCP
+
+jurisdiction: FI
+authority: Finanssivalvonta (Finnish Financial Supervisory Authority)
+authority_abbreviation: FIN-FSA
+
+sources:
+  - id: FINFSA_Maaraykset
+    name: FIN-FSA Regulations (Maaraykset)
+    description: Binding supervisory regulations issued by Finanssivalvonta
+    url: https://www.finanssivalvonta.fi/en/regulation/FIN-FSA-regulations/
+    language: [fi, sv, en]
+    license: Public regulatory publication
+    ingest_script: scripts/ingest-fiva.ts
+
+  - id: FINFSA_Ohjeet
+    name: FIN-FSA Guidelines (Ohjeet)
+    description: Supervisory guidelines issued by Finanssivalvonta (non-binding but authoritative)
+    url: https://www.finanssivalvonta.fi/en/regulation/FIN-FSA-regulations/
+    language: [fi, sv, en]
+    license: Public regulatory publication
+    ingest_script: scripts/ingest-fiva.ts
+
+  - id: FINFSA_Kannanotot
+    name: FIN-FSA Regulatory Statements (Kannanotot)
+    description: Interpretive statements and supervisory positions issued by Finanssivalvonta
+    url: https://www.finanssivalvonta.fi/en/regulation/FIN-FSA-regulations/
+    language: [fi, sv, en]
+    license: Public regulatory publication
+    ingest_script: scripts/ingest-fiva.ts
+
+  - id: enforcement_actions
+    name: FIN-FSA Supervisory Measures
+    description: Administrative sanctions, fines, bans, restrictions, and public warnings
+    url: https://www.finanssivalvonta.fi/en/about-the-fin-fsa/powers-and-funding/powers-and-authority/supervisory-measures/
+    language: [fi, sv, en]
+    license: Public regulatory publication
+    ingest_script: scripts/ingest-fiva.ts
+
+notes:
+  - Coverage may be incomplete; always verify against primary sources at finanssivalvonta.fi
+  - Data is periodically re-ingested via scripts/ingest-fiva.ts
+  - Use fi_fin_check_data_freshness to inspect current database timestamps

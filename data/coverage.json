@@ -1,0 +1,44 @@
+{
+  "jurisdiction": "FI",
+  "authority": "Finanssivalvonta (Finnish Financial Supervisory Authority)",
+  "authority_abbreviation": "FIN-FSA",
+  "authority_url": "https://www.finanssivalvonta.fi/",
+  "languages": ["fi", "sv", "en"],
+  "license": "Public regulatory publications — open for research use",
+  "corpus": [
+    {
+      "id": "FINFSA_Maaraykset",
+      "name": "FIN-FSA Regulations",
+      "name_fi": "Maaraykset",
+      "type": "binding_regulation",
+      "source_url": "https://www.finanssivalvonta.fi/en/regulation/FIN-FSA-regulations/"
+    },
+    {
+      "id": "FINFSA_Ohjeet",
+      "name": "FIN-FSA Guidelines",
+      "name_fi": "Ohjeet",
+      "type": "supervisory_guideline",
+      "source_url": "https://www.finanssivalvonta.fi/en/regulation/FIN-FSA-regulations/"
+    },
+    {
+      "id": "FINFSA_Kannanotot",
+      "name": "FIN-FSA Regulatory Statements",
+      "name_fi": "Kannanotot",
+      "type": "interpretive_statement",
+      "source_url": "https://www.finanssivalvonta.fi/en/regulation/FIN-FSA-regulations/"
+    },
+    {
+      "id": "enforcement_actions",
+      "name": "FIN-FSA Supervisory Measures",
+      "type": "enforcement",
+      "source_url": "https://www.finanssivalvonta.fi/en/about-the-fin-fsa/powers-and-funding/powers-and-authority/supervisory-measures/"
+    }
+  ],
+  "completeness_caveats": [
+    "Coverage may be incomplete — not all historical documents may be indexed",
+    "Finnish and Swedish language versions may differ; English summaries are provided where available",
+    "Always verify regulatory text against the official Finanssivalvonta portal"
+  ],
+  "data_freshness_note": "Use the fi_fin_check_data_freshness tool to inspect current database timestamps. The database is rebuilt periodically via scripts/ingest-fiva.ts.",
+  "schema_version": "1.0"
+}
