@@ -4,7 +4,7 @@
 
 [![npm version](https://badge.fury.io/js/%40ansvar%2Ffinnish-financial-regulation-mcp.svg)](https://www.npmjs.com/package/@ansvar/finnish-financial-regulation-mcp)
 [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
-[![CI](https://github.com/Ansvar-Systems/finnish-financial-regulation-mcp/actions/workflows/ci.yml/badge.svg)](https://github.com/Ansvar-Systems/finnish-financial-regulation-mcp/actions/workflows/ci.yml)
+[![Docker Build](https://github.com/Ansvar-Systems/finnish-financial-regulation-mcp/actions/workflows/ghcr-build.yml/badge.svg)](https://github.com/Ansvar-Systems/finnish-financial-regulation-mcp/actions/workflows/ghcr-build.yml)
 
 Query Finnish financial regulation data -- regulations, decisions, and requirements from Finanssivalvonta (Finnish Financial Supervisory Authority) -- directly from Claude, Cursor, or any MCP-compatible client.
 
@@ -90,7 +90,7 @@ npx @ansvar/finnish-financial-regulation-mcp
 
 ---
 
-## Available Tools (6)
+## Available Tools (8)
 
 | Tool | Description |
 |------|-------------|
@@ -100,6 +100,8 @@ npx @ansvar/finnish-financial-regulation-mcp
 | `fi_fin_search_enforcement` | Search Finanssivalvonta enforcement actions — supervisory decisions, administrative fines (hallinnolliset sanktiot), ... |
 | `fi_fin_check_currency` | Check whether a specific Finanssivalvonta provision reference is currently in force. |
 | `fi_fin_about` | Return metadata about this MCP server: version, data source, tool list. |
+| `fi_fin_list_sources` | Return provenance metadata: official source URLs, languages, license, and coverage categories. |
+| `fi_fin_check_data_freshness` | Report data freshness: latest provision and enforcement dates plus row counts. |
 
 All tools return structured data with source references and timestamps.
 
@@ -117,7 +119,7 @@ All content is sourced from official Finnish regulatory publications:
 - Freshness checks run via GitHub Actions workflows
 - Last-updated timestamps in tool responses indicate data age
 
-See `sources.yml` for full provenance metadata.
+See [`sources.yml`](sources.yml) for full provenance metadata.
 
 ---
 
@@ -218,7 +220,7 @@ Apache License 2.0. See [LICENSE](./LICENSE) for details.
 
 ### Data Licenses
 
-Regulatory data sourced from official government publications. See `sources.yml` for per-source licensing details.
+Regulatory data sourced from official government publications. See [`sources.yml`](sources.yml) for per-source licensing details.
 
 ---
 
