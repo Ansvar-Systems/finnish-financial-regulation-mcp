@@ -2,11 +2,11 @@
   "name": "@ansvar/finnish-financial-regulation-mcp",
   "version": "0.1.0",
   "mcpName": "eu.ansvar/finnish-financial-regulation-mcp",
-  "description": "Finanssivalvonta (FIN-FSA) MCP server — määräykset, ohjeet, kannanotot ja valvontatoimet",
+  "description": "Finanssivalvonta (FIN-FSA) MCP server \u2014 m\u00e4\u00e4r\u00e4ykset, ohjeet, kannanotot ja valvontatoimet",
   "type": "module",
-  "main": "dist/src/index.js",
+  "main": "dist/index.js",
   "bin": {
-    "finnish-financial-regulation-mcp": "dist/src/index.js"
+    "finnish-financial-regulation-mcp": "dist/index.js"
   },
   "files": [
     "dist",
@@ -40,11 +40,11 @@
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "dev": "tsx src/http-server.ts",
-    "start": "node dist/src/http-server.js",
+    "start": "node dist/http-server.js",
     "seed": "npx tsx scripts/seed-sample.ts",
-    "ingest": "npx tsx scripts/ingest-fiva.ts",
     "typecheck": "tsc --noEmit -p tsconfig.json",
-    "lint": "tsc --noEmit"
+    "lint": "tsc --noEmit",
+    "test:contract": "echo \"No contract tests yet\" && exit 0"
   },
   "devDependencies": {
     "@types/better-sqlite3": "^7.6.12",

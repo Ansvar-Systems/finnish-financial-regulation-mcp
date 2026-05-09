@@ -214,7 +214,7 @@ const _META = {
 function textContent(data: unknown) {
   const payload =
     typeof data === "object" && data !== null
-      ? { ...(data as Record<string, unknown>), _meta: _META }
+      ? { ...(data as unknown as Record<string, unknown>), _meta: _META }
       : data;
   return {
     content: [
@@ -265,7 +265,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
             `Provision not found: ${parsed.sourcebook} ${parsed.reference}`,
           );
         }
-        const provisionRecord = provision as unknown as Record<string, unknown>;
+        const provisionRecord = provision as unknown as unknown as Record<string, unknown>;
         return textContent({
           ...provisionRecord,
           _citation: buildCitation(
