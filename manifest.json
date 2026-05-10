@@ -1,0 +1,67 @@
+{
+  "manifest_version": "0.3",
+  "name": "finnish-financial-regulation",
+  "display_name": "finnish-financial-regulation-mcp",
+  "version": "0.1.0",
+  "description": "Finanssivalvonta (FIN-FSA) MCP server — määräykset, ohjeet, kannanotot ja valvontatoimet",
+  "author": {
+    "name": "Ansvar Systems",
+    "email": "hello@ansvar.eu",
+    "url": "https://ansvar.eu"
+  },
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Ansvar-Systems/finnish-financial-regulation-mcp"
+  },
+  "homepage": "https://ansvar.eu",
+  "keywords": ["mcp", "model-context-protocol", "ai", "claude", "finanssivalvonta", "fin-fsa", "finnish-financial-regulation", "compliance", "financial-services", "ansvar"],
+  "category": "financial-regulation",
+  "jurisdiction": "FI",
+  "server": {
+    "type": "node",
+    "entry_point": "dist/src/index.js",
+    "mcp_config": {
+      "command": "node",
+      "args": ["${__dirname}/dist/src/index.js"],
+      "env": {}
+    }
+  },
+  "tools": [
+      {
+          "name": "search_regulations"
+      },
+      {
+          "name": "get_regulation"
+      },
+      {
+          "name": "list_sourcebooks"
+      },
+      {
+          "name": "search_enforcement"
+      },
+      {
+          "name": "check_currency"
+      },
+      {
+          "name": "about"
+      },
+      {
+          "name": "list_sources"
+      },
+      {
+          "name": "check_data_freshness"
+      }
+  ],
+  "attribution": {
+    "publisher": "FIN-FSA Regulations (Maaraykset)",
+    "license": "Public regulatory publication",
+    "source_url_pattern": "https://www.finanssivalvonta.fi/en/regulation/FIN-FSA-regulations/"
+  },
+  "compatibility": {
+    "platforms": ["darwin", "win32", "linux"],
+    "runtimes": {
+      "node": ">=20.0.0"
+    }
+  }
+}
