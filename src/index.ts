@@ -28,7 +28,12 @@ import {
   checkProvisionCurrency,
   checkDataFreshness,
 } from "./db.js";
-import { attachCitationsToSearchResults, buildCitation } from "./citation.js";
+import { buildCitation, buildProvenanceCitation } from "./citation.js";
+
+// Provenance attribution constants for fi_fin_* tool envelopes.
+// Used by buildProvenanceCitation per spec 2026-05-18 §6.
+const PROV_PUBLISHER = "Finanssivalvonta (FIN-FSA)";
+const PROV_LICENSE = "FI-Statutory-PD";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -254,24 +259,25 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
           status: parsed.status,
           limit: parsed.limit,
         });
-        const results = attachCitationsToSearchResults(
-          rows as unknown as Array<Record<string, unknown>>,
-          "fi_fin_search_regulations",
-          (row) => ({
-            canonical_ref: String(row["reference"] ?? ""),
-            display_text: String(
-              row["title"] ?? row["reference"] ?? "(untitled)",
+        // Per spec §6: every search result carries the provenance envelope
+        // on `_citation`. Rows without source_url are skipped from citation
+        // emission (No Silent Fallbacks) but still returned with row data.
+        const results = rows.map((row) => {
+          const rec = row as unknown as Record<string, unknown>;
+          const sourceUrl =
+            typeof rec["source_url"] === "string"
+              ? (rec["source_url"] as string)
+              : "";
+          if (!sourceUrl) return rec;
+          return {
+            ...rec,
+            _citation: buildProvenanceCitation(
+              { source_url: sourceUrl },
+              PROV_PUBLISHER,
+              PROV_LICENSE,
             ),
-            lookup_args: {
-              sourcebook: String(row["sourcebook_id"] ?? ""),
-              reference: String(row["reference"] ?? ""),
-            },
-            source_url:
-              typeof row["source_url"] === "string"
-                ? (row["source_url"] as string)
-                : null,
-          }),
-        );
+          };
+        });
         return textContent({ results, count: results.length });
       }
 
@@ -288,9 +294,11 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
           typeof provisionRecord["source_url"] === "string"
             ? (provisionRecord["source_url"] as string)
             : null;
-        return textContent({
+        // Per spec §6: provenance envelope on `_citation`; deterministic
+        // canonical_ref envelope on `_entity_citation` (law-mcp §4.9c).
+        const out: Record<string, unknown> = {
           ...provisionRecord,
-          _citation: buildCitation(
+          _entity_citation: buildCitation(
             String(provisionRecord["reference"] ?? parsed.reference),
             String(
               provisionRecord["title"] ??
@@ -300,7 +308,15 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
             { sourcebook: parsed.sourcebook, reference: parsed.reference },
             sourceUrl,
           ),
-        });
+        };
+        if (sourceUrl) {
+          out["_citation"] = buildProvenanceCitation(
+            { source_url: sourceUrl },
+            PROV_PUBLISHER,
+            PROV_LICENSE,
+          );
+        }
+        return textContent(out);
       }
 
       case "fi_fin_list_sourcebooks": {
@@ -315,30 +331,22 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
           action_type: parsed.action_type,
           limit: parsed.limit,
         });
-        const results = attachCitationsToSearchResults(
-          rows as unknown as Array<Record<string, unknown>>,
-          "fi_fin_search_enforcement",
-          (row) => {
-            const ref =
-              (row["reference_number"] as string | null) ??
-              `enforcement-${String(row["id"] ?? "")}`;
-            const firmName = String(row["firm_name"] ?? "");
-            const date = (row["date"] as string | null) ?? "";
-            return {
-              canonical_ref: String(ref),
-              display_text: date
-                ? `${firmName} (${date})`
-                : firmName || String(ref),
-              lookup_args: {
-                query: firmName || String(ref),
-              },
-              source_url:
-                typeof row["source_url"] === "string"
-                  ? (row["source_url"] as string)
-                  : null,
-            };
-          },
-        );
+        const results = rows.map((row) => {
+          const rec = row as unknown as Record<string, unknown>;
+          const sourceUrl =
+            typeof rec["source_url"] === "string"
+              ? (rec["source_url"] as string)
+              : "";
+          if (!sourceUrl) return rec;
+          return {
+            ...rec,
+            _citation: buildProvenanceCitation(
+              { source_url: sourceUrl },
+              PROV_PUBLISHER,
+              PROV_LICENSE,
+            ),
+          };
+        });
         return textContent({ results, count: results.length });
       }
 
