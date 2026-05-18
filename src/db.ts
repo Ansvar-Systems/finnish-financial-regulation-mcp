@@ -24,6 +24,7 @@ CREATE TABLE IF NOT EXISTS provisions (
   id             INTEGER PRIMARY KEY AUTOINCREMENT,
   sourcebook_id  TEXT    NOT NULL,
   reference      TEXT    NOT NULL,
+  source_url     TEXT,
   title          TEXT,
   text           TEXT    NOT NULL,
   type           TEXT,
@@ -64,6 +65,7 @@ END;
 CREATE TABLE IF NOT EXISTS enforcement_actions (
   id                    INTEGER PRIMARY KEY AUTOINCREMENT,
   firm_name             TEXT    NOT NULL,
+  source_url            TEXT,
   reference_number      TEXT,
   action_type           TEXT,
   amount                REAL,
@@ -109,6 +111,7 @@ export interface Provision {
   id: number;
   sourcebook_id: string;
   reference: string;
+  source_url: string | null;
   title: string | null;
   text: string;
   type: string | null;
@@ -121,12 +124,40 @@ export interface Provision {
 export interface EnforcementAction {
   id: number;
   firm_name: string;
+  source_url: string | null;
   reference_number: string | null;
   action_type: string | null;
   amount: number | null;
   date: string | null;
   summary: string | null;
   sourcebook_references: string | null;
+}
+
+// FTS5 on this DB uses the default `unicode61` tokenizer which has no
+// Finnish stemmer. Bare-stem queries against Finnish corpora silently
+// return zero results because the indexed tokens are inflected forms
+// (e.g. "luotto" → 0 hits, "luotto*" → 7 hits, LIKE '%luotto%' → 9 hits).
+// We auto-append `*` to bare alphanumeric tokens so callers can submit
+// natural queries without knowing about FTS5 prefix syntax. Skip the
+// rewrite when the query already contains FTS operators so power users
+// keep control. See feedback_*_fts_silent_zero_results_2026_05_18.
+export function rewriteQueryForFts(q: string): string {
+  const trimmed = q.trim();
+  if (trimmed.length === 0) return trimmed;
+  // Pass through if the query already uses any FTS5 operator/syntax.
+  // Operators: AND OR NOT NEAR (uppercase per FTS5 grammar);
+  // quoted phrases ("..."), prefix (*), column filter (:),
+  // negation (-), set-grouping (^), parens.
+  if (/(\bAND\b|\bOR\b|\bNOT\b|\bNEAR\b|["*:\^()-])/.test(trimmed)) {
+    return trimmed;
+  }
+  // Append `*` to each bare token (alphanumeric incl. Finnish accents).
+  // Tokens must already be >= 1 char; FTS5 rejects bare `*` so skip pure-punct.
+  return trimmed
+    .split(/\s+/)
+    .map((tok) => (/^[\p{L}\p{N}_]+$/u.test(tok) ? `${tok}*` : tok))
+    .filter((tok) => tok.length > 0)
+    .join(" ");
 }
 
 let _db: Database.Database | null = null;
@@ -164,10 +195,11 @@ export interface SearchProvisionsOptions {
 export function searchProvisions(opts: SearchProvisionsOptions): Provision[] {
   const db = getDb();
   const limit = opts.limit ?? 20;
+  const query = rewriteQueryForFts(opts.query);
 
   if (opts.sourcebook ?? opts.status) {
     const conditions: string[] = [];
-    const params: Record<string, unknown> = { query: opts.query, limit };
+    const params: Record<string, unknown> = { query, limit };
 
     if (opts.sourcebook) {
       conditions.push("p.sourcebook_id = :sourcebook");
@@ -198,7 +230,7 @@ export function searchProvisions(opts: SearchProvisionsOptions): Provision[] {
        ORDER BY rank
        LIMIT :limit`,
     )
-    .all({ query: opts.query, limit }) as Provision[];
+    .all({ query, limit }) as Provision[];
 }
 
 export function getProvision(
@@ -291,6 +323,7 @@ export function searchEnforcement(
 ): EnforcementAction[] {
   const db = getDb();
   const limit = opts.limit ?? 20;
+  const query = rewriteQueryForFts(opts.query);
 
   if (opts.action_type) {
     return db
@@ -301,7 +334,7 @@ export function searchEnforcement(
          ORDER BY rank
          LIMIT :limit`,
       )
-      .all({ query: opts.query, action_type: opts.action_type, limit }) as EnforcementAction[];
+      .all({ query, action_type: opts.action_type, limit }) as EnforcementAction[];
   }
 
   return db
@@ -312,5 +345,5 @@ export function searchEnforcement(
        ORDER BY rank
        LIMIT :limit`,
     )
-    .all({ query: opts.query, limit }) as EnforcementAction[];
+    .all({ query, limit }) as EnforcementAction[];
 }

@@ -31,6 +31,7 @@ import {
   checkProvisionCurrency,
   checkDataFreshness,
 } from "./db.js";
+import { attachCitationsToSearchResults, buildCitation } from "./citation.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -208,12 +209,30 @@ function createMcpServer(): Server {
       switch (name) {
         case "fi_fin_search_regulations": {
           const parsed = SearchRegulationsArgs.parse(args);
-          const results = searchProvisions({
+          const rows = searchProvisions({
             query: parsed.query,
             sourcebook: parsed.sourcebook,
             status: parsed.status,
             limit: parsed.limit,
           });
+          const results = attachCitationsToSearchResults(
+            rows as unknown as Array<Record<string, unknown>>,
+            "fi_fin_search_regulations",
+            (row) => ({
+              canonical_ref: String(row["reference"] ?? ""),
+              display_text: String(
+                row["title"] ?? row["reference"] ?? "(untitled)",
+              ),
+              lookup_args: {
+                sourcebook: String(row["sourcebook_id"] ?? ""),
+                reference: String(row["reference"] ?? ""),
+              },
+              source_url:
+                typeof row["source_url"] === "string"
+                  ? (row["source_url"] as string)
+                  : null,
+            }),
+          );
           return textContent({ results, count: results.length });
         }
 
@@ -225,7 +244,27 @@ function createMcpServer(): Server {
               `Provision not found: ${parsed.sourcebook} ${parsed.reference}`,
             );
           }
-          return textContent(provision);
+          const provisionRecord = provision as unknown as Record<
+            string,
+            unknown
+          >;
+          const sourceUrl =
+            typeof provisionRecord["source_url"] === "string"
+              ? (provisionRecord["source_url"] as string)
+              : null;
+          return textContent({
+            ...provisionRecord,
+            _citation: buildCitation(
+              String(provisionRecord["reference"] ?? parsed.reference),
+              String(
+                provisionRecord["title"] ??
+                  `${parsed.sourcebook} ${parsed.reference}`,
+              ),
+              "fi_fin_get_regulation",
+              { sourcebook: parsed.sourcebook, reference: parsed.reference },
+              sourceUrl,
+            ),
+          });
         }
 
         case "fi_fin_list_sourcebooks": {
@@ -235,11 +274,35 @@ function createMcpServer(): Server {
 
         case "fi_fin_search_enforcement": {
           const parsed = SearchEnforcementArgs.parse(args);
-          const results = searchEnforcement({
+          const rows = searchEnforcement({
             query: parsed.query,
             action_type: parsed.action_type,
             limit: parsed.limit,
           });
+          const results = attachCitationsToSearchResults(
+            rows as unknown as Array<Record<string, unknown>>,
+            "fi_fin_search_enforcement",
+            (row) => {
+              const ref =
+                (row["reference_number"] as string | null) ??
+                `enforcement-${String(row["id"] ?? "")}`;
+              const firmName = String(row["firm_name"] ?? "");
+              const date = (row["date"] as string | null) ?? "";
+              return {
+                canonical_ref: String(ref),
+                display_text: date
+                  ? `${firmName} (${date})`
+                  : firmName || String(ref),
+                lookup_args: {
+                  query: firmName || String(ref),
+                },
+                source_url:
+                  typeof row["source_url"] === "string"
+                    ? (row["source_url"] as string)
+                    : null,
+              };
+            },
+          );
           return textContent({ results, count: results.length });
         }
 
