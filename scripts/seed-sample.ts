@@ -80,6 +80,7 @@ console.log(`Inserted ${sourcebooks.length} sourcebooks`);
 interface ProvisionRow {
   sourcebook_id: string;
   reference: string;
+  source_url?: string;
   title: string;
   text: string;
   type: string;
@@ -89,8 +90,25 @@ interface ProvisionRow {
   section: string;
 }
 
+// Source-URL prefixes per sourcebook. Real finanssivalvonta.fi URLs;
+// when the production ingest pipeline lands (PR-B), it will carry the
+// scrape-time URL through to this column. The seed uses these stable
+// regulation/guideline/statement index URLs as a placeholder so the
+// _citation pipeline has non-NULL source_url to verify against in CI.
+const SOURCE_URL_BY_SOURCEBOOK: Record<string, string> = {
+  FINFSA_MAARAYKSET:
+    "https://www.finanssivalvonta.fi/en/regulation/FIN-FSA-regulations/",
+  FINFSA_OHJEET:
+    "https://www.finanssivalvonta.fi/en/regulation/FIN-FSA-regulations/",
+  FINFSA_KANNANOTOT:
+    "https://www.finanssivalvonta.fi/en/regulation/regulatory-statements/",
+};
+const ENFORCEMENT_SOURCE_URL =
+  "https://www.finanssivalvonta.fi/en/about-the-fin-fsa/powers-and-funding/powers-and-authority/supervisory-measures/";
+
 const provisions: ProvisionRow[] = [
   // -- FINFSA_MAARAYKSET — Binding Regulations --
+  // source_url is injected at INSERT time from SOURCE_URL_BY_SOURCEBOOK.
   {
     sourcebook_id: "FINFSA_MAARAYKSET",
     reference: "FIVA_M_2021_01",
@@ -195,15 +213,18 @@ const provisions: ProvisionRow[] = [
 ];
 
 const insertProvision = db.prepare(`
-  INSERT INTO provisions (sourcebook_id, reference, title, text, type, status, effective_date, chapter, section)
-  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+  INSERT INTO provisions (sourcebook_id, reference, source_url, title, text, type, status, effective_date, chapter, section)
+  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 `);
 
 const insertAll = db.transaction(() => {
   for (const p of provisions) {
+    const sourceUrl =
+      p.source_url ?? SOURCE_URL_BY_SOURCEBOOK[p.sourcebook_id] ?? null;
     insertProvision.run(
       p.sourcebook_id,
       p.reference,
+      sourceUrl,
       p.title,
       p.text,
       p.type,
@@ -223,12 +244,35 @@ console.log(`Inserted ${provisions.length} sample provisions`);
 
 interface EnforcementRow {
   firm_name: string;
+  source_url?: string;
   reference_number: string;
   action_type: string;
   amount: number;
   date: string;
   summary: string;
   sourcebook_references: string;
+}
+
+/**
+ * Defensive filter for enforcement rows. The 2026-05 prod corpus contained
+ * a single stub row (firm_name == summary == "Decision") that survived a
+ * crawl parse failure. Drop rows where the firm name is too short or
+ * identical to the summary — those are unparseable shells, not real
+ * supervisory actions. The full ingest pipeline (PR-B, scripts/ingest-fiva.ts
+ * on the feature branch) should call this too.
+ */
+function isWellFormedEnforcement(row: EnforcementRow): boolean {
+  if (!row.firm_name || row.firm_name.length < 4) {
+    console.log(`  SKIP: firm_name too short: ${JSON.stringify(row.firm_name)}`);
+    return false;
+  }
+  if (row.firm_name === row.summary) {
+    console.log(
+      `  SKIP: firm_name == summary (likely parse stub): ${JSON.stringify(row.firm_name)}`,
+    );
+    return false;
+  }
+  return true;
 }
 
 const enforcements: EnforcementRow[] = [
@@ -255,14 +299,18 @@ const enforcements: EnforcementRow[] = [
 ];
 
 const insertEnforcement = db.prepare(`
-  INSERT INTO enforcement_actions (firm_name, reference_number, action_type, amount, date, summary, sourcebook_references)
-  VALUES (?, ?, ?, ?, ?, ?, ?)
+  INSERT INTO enforcement_actions (firm_name, source_url, reference_number, action_type, amount, date, summary, sourcebook_references)
+  VALUES (?, ?, ?, ?, ?, ?, ?, ?)
 `);
 
+let insertedEnforcement = 0;
 const insertEnforcementsAll = db.transaction(() => {
   for (const e of enforcements) {
+    if (!isWellFormedEnforcement(e)) continue;
+    const sourceUrl = e.source_url ?? ENFORCEMENT_SOURCE_URL;
     insertEnforcement.run(
       e.firm_name,
+      sourceUrl,
       e.reference_number,
       e.action_type,
       e.amount,
@@ -270,12 +318,15 @@ const insertEnforcementsAll = db.transaction(() => {
       e.summary,
       e.sourcebook_references,
     );
+    insertedEnforcement += 1;
   }
 });
 
 insertEnforcementsAll();
 
-console.log(`Inserted ${enforcements.length} sample enforcement actions`);
+console.log(
+  `Inserted ${insertedEnforcement} sample enforcement actions (filtered ${enforcements.length - insertedEnforcement} malformed)`,
+);
 
 // -- Summary --
 

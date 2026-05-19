@@ -31,6 +31,12 @@ import {
   checkProvisionCurrency,
   checkDataFreshness,
 } from "./db.js";
+import { buildCitation, buildProvenanceCitation } from "./citation.js";
+
+// Provenance attribution constants for fi_fin_* tool envelopes.
+// Used by buildProvenanceCitation per spec 2026-05-18 §6.
+const PROV_PUBLISHER = "Finanssivalvonta (FIN-FSA)";
+const PROV_LICENSE = "FI-Statutory-PD";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -208,11 +214,30 @@ function createMcpServer(): Server {
       switch (name) {
         case "fi_fin_search_regulations": {
           const parsed = SearchRegulationsArgs.parse(args);
-          const results = searchProvisions({
+          const rows = searchProvisions({
             query: parsed.query,
             sourcebook: parsed.sourcebook,
             status: parsed.status,
             limit: parsed.limit,
+          });
+          // Per spec §6: every search result carries the provenance envelope
+          // on `_citation`. Rows without source_url are skipped from citation
+          // emission (No Silent Fallbacks) but still returned with the row data.
+          const results = rows.map((row) => {
+            const rec = row as unknown as Record<string, unknown>;
+            const sourceUrl =
+              typeof rec["source_url"] === "string"
+                ? (rec["source_url"] as string)
+                : "";
+            if (!sourceUrl) return rec;
+            return {
+              ...rec,
+              _citation: buildProvenanceCitation(
+                { source_url: sourceUrl },
+                PROV_PUBLISHER,
+                PROV_LICENSE,
+              ),
+            };
           });
           return textContent({ results, count: results.length });
         }
@@ -225,7 +250,37 @@ function createMcpServer(): Server {
               `Provision not found: ${parsed.sourcebook} ${parsed.reference}`,
             );
           }
-          return textContent(provision);
+          const provisionRecord = provision as unknown as Record<
+            string,
+            unknown
+          >;
+          const sourceUrl =
+            typeof provisionRecord["source_url"] === "string"
+              ? (provisionRecord["source_url"] as string)
+              : null;
+          // Per spec §6: provenance envelope on `_citation`; deterministic
+          // canonical_ref envelope on `_entity_citation` (law-mcp golden std §4.9c).
+          const out: Record<string, unknown> = {
+            ...provisionRecord,
+            _entity_citation: buildCitation(
+              String(provisionRecord["reference"] ?? parsed.reference),
+              String(
+                provisionRecord["title"] ??
+                  `${parsed.sourcebook} ${parsed.reference}`,
+              ),
+              "fi_fin_get_regulation",
+              { sourcebook: parsed.sourcebook, reference: parsed.reference },
+              sourceUrl,
+            ),
+          };
+          if (sourceUrl) {
+            out["_citation"] = buildProvenanceCitation(
+              { source_url: sourceUrl },
+              PROV_PUBLISHER,
+              PROV_LICENSE,
+            );
+          }
+          return textContent(out);
         }
 
         case "fi_fin_list_sourcebooks": {
@@ -235,10 +290,26 @@ function createMcpServer(): Server {
 
         case "fi_fin_search_enforcement": {
           const parsed = SearchEnforcementArgs.parse(args);
-          const results = searchEnforcement({
+          const rows = searchEnforcement({
             query: parsed.query,
             action_type: parsed.action_type,
             limit: parsed.limit,
+          });
+          const results = rows.map((row) => {
+            const rec = row as unknown as Record<string, unknown>;
+            const sourceUrl =
+              typeof rec["source_url"] === "string"
+                ? (rec["source_url"] as string)
+                : "";
+            if (!sourceUrl) return rec;
+            return {
+              ...rec,
+              _citation: buildProvenanceCitation(
+                { source_url: sourceUrl },
+                PROV_PUBLISHER,
+                PROV_LICENSE,
+              ),
+            };
           });
           return textContent({ results, count: results.length });
         }
