@@ -42,6 +42,8 @@
     "dev": "tsx src/http-server.ts",
     "start": "node dist/http-server.js",
     "seed": "npx tsx scripts/seed-sample.ts",
+    "ingest": "npx tsx scripts/ingest-fiva.ts",
+    "ingest:dry-run": "npx tsx scripts/ingest-fiva.ts --dry-run",
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "lint": "tsc --noEmit",
     "test:contract": "echo \"No contract tests yet\" && exit 0"
